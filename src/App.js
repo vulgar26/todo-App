@@ -1,5 +1,8 @@
 import React, {useState, useEffect} from 'react';
 import './App.css';
+import Counter from './Counter';
+import LoginForm from './LoginForm';
+import TaskList from './TaskList';
 
 function App() {
   const [todos, setTodos] = useState(() => {
@@ -66,6 +69,9 @@ function App() {
           </li>  
         ))}
       </ul>
+      <Counter />
+      <LoginForm />
+      <TaskList />
     </div>
   );
 }
