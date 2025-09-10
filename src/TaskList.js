@@ -1,8 +1,11 @@
-import React, { useState } from "react";
+import React, { useContext, useState } from "react";
+import { Link } from "react-router-dom";
+import { ThemeContext } from "./ThemeContext";
 
 function TaskList() {
     const [tasks, setTasks] = useState([]);
     const [input, setInput] = useState('');
+    const { theme, toggleTheme } = useContext(ThemeContext);
 
     const addTask = () => {
         if (input.trim()) {
@@ -16,8 +19,9 @@ function TaskList() {
     };
 
     return (
-        <div>
+        <div style={{background: theme === 'light' ? '#fff' : '#333', color: theme === 'light' ? '#000' : '#fff'}}>
             <h2>任务清单</h2>
+            <button onClick={toggleTheme}>切换主题</button>
             <input
               type="text"
               value={input}
@@ -33,6 +37,7 @@ function TaskList() {
                     {tasks.map((task, index) => (
                         <li key={index}>
                             {task}
+                            <Link to={`/task/${index}`}>{task}</Link>
                             <button onClick={() => deleteTask(index)}>删除</button>
                         </li>
                     ))}

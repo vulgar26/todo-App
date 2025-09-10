@@ -1,8 +1,11 @@
 import React, {useState, useEffect} from 'react';
+import { BrowserRouter as Router, Route, Link, Routes } from 'react-router-dom';
 import './App.css';
+import { ThemeProvider } from './ThemeContext';
 import Counter from './Counter';
 import LoginForm from './LoginForm';
 import TaskList from './TaskList';
+import TaskDetail from './TaskDetail';
 
 function App() {
   const [todos, setTodos] = useState(() => {
@@ -43,36 +46,24 @@ function App() {
   ;}
 
   return (
+    <Router>
+    <ThemeProvider>
     <div className='App'>
-      <h1>待办事项</h1>
-      <input
-        type='text'
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        placeholder='输入待办事项'
-      />
-      <button onClick={addTodo}>添加</button>
+        <div>
+          <nav>
+            <Link to='/'>任务清单</Link>
+          </nav>
+          <Routes>
+            <Route path='/' element={<TaskList />} />
+            <Route path='/task/:id' element={<TaskDetail />}/>
+          </Routes>
 
-      <ul>
-        {todos.map((todo, index)=>(
-          <li
-            key={index}
-            style={{
-              textDecoration: todo.isCompleted ? 'line-through' : 'none',
-            }}
-          >
-            {todo.text}
-            <button onClick={() => toggleComplete(index)}>
-              {todo.isCompleted ? '未完成' : '完成'}
-            </button>
-            <button onClick={() => deleteTodo(index)}>删除</button>
-          </li>  
-        ))}
-      </ul>
-      <Counter />
-      <LoginForm />
-      <TaskList />
+          <Counter />
+          <LoginForm />
+        </div>
     </div>
+    </ThemeProvider>
+    </Router>
   );
 }
 
