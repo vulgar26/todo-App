@@ -34,3 +34,17 @@ backend/*.log
 
 # 忽略环境变量文件
 *.env
+
+# DB files (SQLite)
+backend/*.db
+backend/*.db-wal
+backend/*.db-shm
+
+# Node
+frontend/node_modules/
+backend/node_modules/
+frontend/build/
+
+# Env & logs
+*.env
+backend/*.log

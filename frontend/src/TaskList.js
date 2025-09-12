@@ -9,91 +9,123 @@ function TaskList() {
     const [loading, setLoading] = useState(true);
     const { theme, toggleTheme } = useContext(ThemeContext);
 
-    const addTask = () => {
-        if (input.trim()) {
-            const newTask = { id: Date.now(), text: input, done: false };
+    const [version, setVersion] = useState(0);
+    const bump = () => setVersion(v => v + 1);
 
-            setTasks([...tasks, newTask]);
-            setInput('');
-
-            fetch('http://localhost:3000/api/tasks', {
+    async function addTask() {
+        const t = input.trim();
+        if (!t) return;
+        try {
+            const res = await fetch('/api/tasks', {
                 method: 'POST',
-                headers: {
-                    'Content-Type' : 'application/json'
-                },
-                body: JSON.stringify(newTask),
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log('任务添加成功：', data);
-            })
-            .catch((error) => {
-                console.error('添加任务失败', error);
-                setError('无法将任务添加到后端');
-            })
+                headers: { 'Content-Type':'application/json' },
+                body: JSON.stringify({ text: t })
+            });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const created = await res.json();
+            setTasks(prev => [...prev, created]);
+            setInput('');
+            bump();
+        } catch (e) {
+            setError(`添加失败：${e.message}`);
         }
-    };
+    }
 
-    const deleteTask = (index) => {
-        const taskToDelete = tasks[index];
+    async function deleteTask(id) {
+        try {
+            const res = await fetch(`/api/tasks/${id}`, { method:'DELETE' });
+            if (res.status !== 204) throw new Error(`HTTP ${res.status}`);
+            setTasks(prev => prev.filter(t => t.id !== id));
+            bump();
+        } catch (e) {
+            setError(`删除失败：${e.message}`);
+        }
+    }
 
-        fetch(`http://localhost:3000/api/tasks/${taskToDelete.id}`, {
-            method: 'DELETE',
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log('任务已经删除', data);
-            setTasks(tasks.filter((_, i) => i !== index));
-        })
-        .catch((error) => {
-            console.error('删除任务失败:', error);
-            setError('无法从后端删除任务');
+    async function toggleDone(task) {
+    try {
+        setError(null);
+        const res = await fetch(`/api/tasks/${task.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type':'application/json' },
+        body: JSON.stringify({ done: !task.done })
         });
-    };
+        if (!res.ok) {
+        const text = await res.text().catch(()=> '');
+        throw new Error(`HTTP ${res.status} ${text}`);
+        }
+        bump(); // 成功后刷新列表
+        } catch (e) {
+        setError(`更新失败：${e.message}`);
+        }
+    }
 
     useEffect(() => {
-        fetch('http://localhost:3000/api/tasks')
-        .then((response) => {
-            if (!response.ok) {
-                throw new Error('网络错误');
+        (async () => {
+            try {
+                if (version === 0) setLoading(true);
+                setError(null);
+                const res = await fetch('/api/tasks');
+                if (!res.ok) {
+                    const text = await res.text().catch(()=> '');
+                    throw new Error(`HTTP ${res.status} ${res.statusText} | ${text.slice(0,120)}`);
+                }
+                const data = await res.json();
+                setTasks(data);
+            } catch (e) {
+                console.error('GET /api/tasks failed:', e);
+                setError(e.message);
+            } finally {
+                setLoading(false);
             }
-            return response.json();
-        })
-        .then((data) => {
-            setTasks(data);
-            setLoading(false);
-        })
-        .catch((error) => {
-            console.error('请求失败', error);
-            setError(error.message);
-            setLoading(false);
-        });
-    }, []);
+        })();
+    }, [version]);
 
     if (loading) return <p>加载中...</p>;
     if (error) return <p style={{ color: 'red' }}>出错了：{error}</p>;
 
     return (
-        <div style={{background: theme === 'light' ? '#fff' : '#333', color: theme === 'light' ? '#000' : '#fff'}}>
+        <div style={{
+            background: theme === 'light' ? '#fff' : '#333', 
+            color: theme === 'light' ? '#000' : '#fff',
+            padding: '20px'
+        }}>
             <h2>任务清单</h2>
             <button onClick={toggleTheme}>切换主题</button>
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="输入任务"
-            />
-            <button onClick={addTask}>添加任务</button>
+            <div style={{ margin: '10px 0' }}>
+                <input
+                    type="text"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    placeholder="输入任务"
+                    style={{ marginRight: '10px', padding: '5px' }}
+                />
+                <button onClick={addTask}>添加任务</button>
+            </div>
 
-            {tasks.length === 0 ?(
+            {tasks.length === 0 ? (
                 <p>没有任务</p>
             ) : (
                 <ul>
-                    {tasks.map((task, index) => (
-                        <li key={task.id}>
-                            {task.text}
-                            <Link to={`/task/${task.id}`}>{task.text}</Link>
-                            <button onClick={() => deleteTask(index)}>删除</button>
+                    {tasks.map((task) => (
+                        <li key={task.id} style={{ margin: '5px 0', listStyle: 'none' }}>
+                            <label style={{marginRight: 10}}>
+                                <input
+                                  type="checkbox"
+                                  checked={task.done}
+                                  onChange={() => toggleDone(task)}
+                                />
+                                <span style={{ textDecoration: task.done ? 'line-through' : 'none'}}>
+                                    {task.text}
+                                </span>
+                            </label>
+                            <Link to={`/task/${task.id}`} style={{ marginRight: '10px' }}>详情</Link>
+                            <button 
+                                onClick={() => deleteTask(task.id)}
+                                style={{ marginLeft: '10px' }}
+                            >
+                                删除
+                            </button>
                         </li>
                     ))}
                 </ul>
