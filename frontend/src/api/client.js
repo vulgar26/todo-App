@@ -10,7 +10,12 @@ async function request(path, options = {}) {
 
   const text = await resp.text();
   let data = null;
-  try { data = text ? JSON.parse(text) : null; } catch {}
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    // 忽略 JSON 解析失败：非 JSON 响应（如 HTML 错页）时保留原始 text 到 err.raw
+    data = null;
+  }
 
   if (!resp.ok) {
     const message = data?.error || `HTTP ${resp.status} ${resp.statusText}`;

@@ -5,14 +5,15 @@
 
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+
 import { ThemeProvider } from './ThemeContext';
 import './App.css';
 
 import Counter from './Counter';
-import LoginForm from './LoginForm';
-import TaskList from './TaskList';
-import TaskDetail from './TaskDetail';
 import DataFetcher from './DataFetcher';
+import LoginForm from './LoginForm';
+import TaskDetail from './TaskDetail';
+import TaskList from './TaskList';
 import TaskListReducer from './TaskListReducer';
 
 export default function App() {

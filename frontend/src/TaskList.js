@@ -1,9 +1,10 @@
 // src/TaskList.js
 import React, { useContext, useState } from "react";
 import { Link } from "react-router-dom";
+
 import { ThemeContext } from "./ThemeContext";
+import TaskItem from "./components/TaskItem.jsx";
 import { useTasks } from "./hooks/useTasks";
-import TaskItem from "./components/TaskItem";
 
 export default function TaskList() {
   const { theme, toggleTheme } = useContext(ThemeContext);
