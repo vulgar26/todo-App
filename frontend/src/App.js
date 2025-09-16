@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Link, Navigate } from 'react-router-dom';
 
 import Counter from './Counter';
 import DataFetcher from './DataFetcher';
@@ -7,72 +7,85 @@ import TaskDetail from './TaskDetail';
 import TaskList from './TaskList';
 import TaskListReducer from './TaskListReducer';
 import { ThemeProvider } from './ThemeContext';
-import { me , logout } from './api/auth';
-import AuthForm from './components/AuthForm';   // ★ 必须存在且路径正确
+
+import { AuthProvider, useAuth } from './context/AuthContext.js';
+import LoginPage from './pages/LoginPage.js'; // 新增：登录页
+import PrivateRoute from './components/PrivateRoute.js'; // 新增：受保护路由
+
+// 顶部导航
+function NavBar() {
+  const { user, logout } = useAuth();
+  return (
+    <nav style={{ marginBottom: 12 }}>
+      <Link to="/">首页/任务清单</Link> |{' '}
+      <Link to="/fetch">useEffect 拉数据</Link> |{' '}
+      <Link to="/tasks-reducer">useReducer 任务</Link>
+      <span style={{ marginLeft: 12, color:'#666' }}>
+        {user ? `已登录：${user.email}` : '未登录'}
+      </span>
+      {user && (
+        <button style={{marginLeft:10}} onClick={logout}>退出登录</button>
+      )}
+    </nav>
+  );
+}
+
+// 首页内容
+function HomePage() {
+  return (
+    <>
+      <Counter />
+      <TaskList />
+    </>
+  );
+}
 
 export default function App() {
-  const [user, setUser] = useState(null);
-  const [checking, setChecking] = useState(true);
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const resp = await me();
-        setUser(resp.data);
-      } catch {
-        setUser(null);
-      } finally {
-        setChecking(false);
-      }
-    })();
-  }, []);
-
   return (
-    <Router>
-      <ThemeProvider>
-        <div className="App">
-          <nav style={{ marginBottom: 12 }}>
-            <Link to="/">首页/任务清单</Link> |{' '}
-            <Link to="/fetch">useEffect 拉数据</Link> |{' '}
-            <Link to="/tasks-reducer">useReducer 任务</Link>
-            <span style={{ marginLeft: 12, color:'#666' }}>
-              {user ? `已登录：${user.email}` : '未登录'}
-            </span>
-          </nav>
+    <AuthProvider>
+      <Router>
+        <ThemeProvider>
+          <div className="App">
+            <NavBar />
+            <Routes>
+              {/* 登录页 */}
+              <Route path="/login" element={<LoginPage />} />
 
-          <Routes>
-            <Route
-              path="/"
-              element={
-                <>
-                  <Counter />
-                  {/* ★★★ 没登录时应该能看到这个表单 ★★★ */}
-                  {!user && <AuthForm onLogin={setUser} />}
+              {/* 注册页（如有） */}
+              {/*<Route path="/register" element={<RegisterPage />} />
 
-                  {checking ? (
-                    <p>检查登录状态...</p>
-                  ) : user ? (
-                    <TaskList />   // 已登录 → 展示任务
-                  ) : (
-                    <p style={{color:'#a33'}}>请先登录后再操作任务</p>
-                  )}
-                  {user && (
-                    <button onClick={async () => {
-                    await logout();
-                    setUser(null);
-                    }}>
-                      退出登录
-                    </button>
-                  )}
-                </>
-              }
-            />
-            <Route path="/task/:id" element={<TaskDetail />} />
-            <Route path="/fetch" element={<DataFetcher />} />
-            <Route path="/tasks-reducer" element={<TaskListReducer />} />
-          </Routes>
-        </div>
-      </ThemeProvider>
-    </Router>
+              {/* 首页和主任务列表，受保护 */}
+              <Route path="/" element={
+                <PrivateRoute>
+                  <HomePage />
+                </PrivateRoute>
+              } />
+
+              {/* 任务详情页，受保护 */}
+              <Route path="/task/:id" element={
+                <PrivateRoute>
+                  <TaskDetail />
+                </PrivateRoute>
+              } />
+
+              {/* 其它演示页面，受保护 */}
+              <Route path="/fetch" element={
+                <PrivateRoute>
+                  <DataFetcher />
+                </PrivateRoute>
+              } />
+              <Route path="/tasks-reducer" element={
+                <PrivateRoute>
+                  <TaskListReducer />
+                </PrivateRoute>
+              } />
+
+              {/* 未定义路由跳转首页 */}
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </div>
+        </ThemeProvider>
+      </Router>
+    </AuthProvider>
   );
 }

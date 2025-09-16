@@ -1,6 +1,7 @@
-import { request } from './client';
+// 让 auth.js 兼容老代码，同时用新对象实现
+import { authApi } from './authApi';
 
-export const me      = ()         => request('/api/auth/me');
-export const login   = (email,pw) => request('/api/auth/login','POST',{ email, password: pw });
-export const register= (email,pw) => request('/api/auth/register','POST',{ email, password: pw });
-export const logout  = ()         => request('/api/auth/logout','POST'); // 如果你实现了
+export const me = authApi.me;
+export const login = authApi.login;
+export const logout = authApi.logout;
+export const register = authApi.register; // 如果有注册功能
