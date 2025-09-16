@@ -1,18 +1,23 @@
+// src/middlewares/validate.js
 import { ZodError } from 'zod';
-import { BadRequest } from '../utils/httpErrors.js';
 
-export const validate = (schema) => (req, _res, next) => {
-  try {
-    req.valid = schema.parse({
-      params: req.params,
-      query:  req.query,
-      body:   req.body,
-    });
-    next();
-  } catch (e) {
-    if (e instanceof ZodError) {
-      const details = e.issues.map(i => ({ path: i.path.join('.'), message: i.message }));
-      next(new BadRequest('参数校验失败', { details }));
-    } else next(e);
-  }
-};
+export function validate(schema) {
+  return (req, res, next) => {
+    try {
+      const input = { body: req.body, query: req.query, params: req.params, headers: req.headers };
+      const parsed = schema.parse(input);
+      req.valid = parsed;
+      next();
+    } catch (e) {
+      if (e instanceof ZodError) {
+        // 明确告诉前端哪里不对
+        const details = e.errors.map(er => ({
+          path: er.path.join('.'),
+          message: er.message
+        }));
+        return res.status(400).json({ error: 'VALIDATION_ERROR', details });
+      }
+      next(e);
+    }
+  };
+}

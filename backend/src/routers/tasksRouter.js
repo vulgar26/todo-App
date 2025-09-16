@@ -1,75 +1,44 @@
 import { Router } from 'express';
-import { z } from 'zod';
-import * as svc from '../services/tasksService.js';
-import { validate } from '../middlewares/validate.js';
-import { ok, created, noContent } from '../middlewares/response.js';
-import { parseListQuery } from '../utils/pagination.js';
+import { listTasks, createTask, toggleTask, deleteTask, getById } from '../repos/tasksRepo.js';
 
 export const tasksRouter = Router();
 
-// GET /api/tasks?offset&limit&done&sort&order
-tasksRouter.get('/',
-  validate(z.object({
-    query: z.object({
-      offset: z.string().optional(),
-      limit:  z.string().optional(),
-      done:   z.enum(['true','false']).optional(),
-      sort:   z.enum(['createdAt','updatedAt','id','title','completed']).optional(),
-      order:  z.enum(['asc','desc']).optional(),
-    }),
-    params: z.object({}),
-    body:   z.object({}).optional(),
-  })),
-  async (req, res, next) => {
-    try {
-      const qp = parseListQuery(req.valid.query);
-      const { items, total } = await svc.list(qp);
-      return ok(res, items, { pagination: { offset: qp.offset, limit: qp.limit, total }});
-    } catch (e) { next(e); }
-  }
-);
+// 列表 GET /api/tasks
+tasksRouter.get('/', async (req,res) => {
+  const { offset=0, limit=20 } = req.query;
+  const rows = await listTasks({ userId: req.user.id, offset:+offset, limit:+limit });
+  res.json({ data: rows.map(r => ({ id:r.id, text:r.title, done: !!r.completed, createdAt:r.createdAt, updatedAt:r.updatedAt })), meta:{ offset:+offset, limit:+limit } });
+});
 
-tasksRouter.post('/',
-  validate(z.object({
-    body: z.object({ text: z.string().min(1).max(100) }),
-    params: z.object({}), query: z.object({}).optional()
-  })),
-  async (req, res, next) => {
-    try {
-      const dto = await svc.create({ text: req.valid.body.text });
-      return created(res, dto);
-    } catch (e) { next(e); }
-  }
-);
+// 新增 POST /api/tasks
+tasksRouter.post('/', async (req,res) => {
+  const text = (req.body?.text || '').trim();
+  if (!text) return res.status(400).json({ error:'text 不能为空' });
+  const row = await createTask({ userId: req.user.id, text });
+  res.status(201).json({ data: { id: row.id, text: row.title, done: !!row.completed, createdAt: row.createdAt, updatedAt: row.updatedAt } });
+});
 
-tasksRouter.patch('/:id',
-  validate(z.object({
-    params: z.object({ id: z.string().regex(/^\d+$/) }),
-    body: z.object({
-      text: z.string().min(1).max(100).optional(),
-      done: z.boolean().optional(),
-    }).refine(b => 'text' in b || 'done' in b, { message: '至少提供 text 或 done' }),
-    query: z.object({}).optional(),
-  })),
-  async (req, res, next) => {
-    try {
-      const id = Number(req.valid.params.id);
-      const dto = await svc.patch(id, req.valid.body);
-      return ok(res, dto);
-    } catch (e) { next(e); }
-  }
-);
+// 勾选 PATCH /api/tasks/:id
+tasksRouter.patch('/:id', async (req,res) => {
+  const id = +req.params.id;
+  const done = !!req.body?.done;
+  const row = await toggleTask({ userId: req.user.id, id, done });
+  if (!row) return res.status(404).json({ error:'Not found' });
+  res.json({ data: { id: row.id, text: row.title, done: !!row.completed, createdAt: row.createdAt, updatedAt: row.updatedAt } });
+});
 
-tasksRouter.delete('/:id',
-  validate(z.object({
-    params: z.object({ id: z.string().regex(/^\d+$/) }),
-    query: z.object({}).optional(), body: z.object({}).optional()
-  })),
-  async (req, res, next) => {
-    try {
-      const id = Number(req.valid.params.id);
-      await svc.remove(id);
-      return noContent(res);
-    } catch (e) { next(e); }
-  }
-);
+// 删除 DELETE /api/tasks/:id
+tasksRouter.delete('/:id', async (req,res) => {
+  const id = +req.params.id;
+  const ok = await deleteTask({ userId: req.user.id, id });
+  if (!ok) return res.status(404).json({ error:'Not found' });
+  res.status(204).end();
+});
+
+// 查询详情 GET /api/tasks/:id
+tasksRouter.get('/:id', async (req,res) => {
+  const id = parseInt(req.params.id, 10);
+  const task = await getById({ userId: req.user.id, id });
+  if (!task) return res.status(404).json({ error: 'Not Found', code: 'NOT_FOUND' });
+  res.json({ data: { id: task.id, text: task.title, done: !!task.completed, createdAt: task.createdAt, updatedAt: task.updatedAt } });
+});

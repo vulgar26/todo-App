@@ -19,6 +19,7 @@ export default function DataFetcher() {
         setError(null);
         // 演示公共 API（可换成本地 /data.json）
         const res = await fetch('https://jsonplaceholder.typicode.com/users?_limit=5', {
+          credentials:'include',
           signal: controller.signal
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);

@@ -1,66 +1,98 @@
-// src/TaskList.js
-import React, { useContext, useState } from "react";
-import { Link } from "react-router-dom";
-
-import { ThemeContext } from "./ThemeContext";
-import TaskItem from "./components/TaskItem.jsx";
-import { useTasks } from "./hooks/useTasks";
+import React, { useEffect, useState } from 'react';
+import { listTasks, createTask, toggleTask, deleteTask } from './api/tasks';
+import { Link } from 'react-router-dom';
 
 export default function TaskList() {
-  const { theme, toggleTheme } = useContext(ThemeContext);
+  const [tasks, setTasks] = useState([]);
   const [input, setInput] = useState('');
-  const { tasks, loading, error, refresh, addTask, toggleTask, removeTask } = useTasks();
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState(null);
 
-  const onSubmit = async (e) => {
-    e.preventDefault();
-    const text = input.trim();
-    if (!text) return;
-    await addTask(text);
+  async function refresh() {
+    try {
+      setErr(null);
+      const resp = await listTasks();
+      setTasks(resp.data || []);
+    } catch (e) {
+      setErr(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { refresh(); }, []);
+
+  async function onAdd(e) {
+  e.preventDefault();
+  const text = input.trim();
+  if (!text) return;
+  
+  console.log('🚀 Creating task with text:', text);
+  console.log(tasks);
+  
+  try {
+    // 调试：检查发送的数据
+    console.log('Calling createTask with:', { text });
+    const result = await createTask(text);
+    console.log('✅ Task created successfully:', result);
+    
     setInput('');
-  };
+    await refresh();
+  } catch (e) {
+    console.error('❌ Task creation failed:', {
+      message: e.message,
+      status: e.status,
+      stack: e.stack
+    });
+    setErr(e.message);
+  }
+}
+
+  async function onToggle(id, done) {
+    try {
+      await toggleTask(id, done);
+      await refresh();
+    } catch (e) {
+      setErr(e.message);
+    }
+  }
+
+  async function onDelete(id) {
+    try {
+      await deleteTask(id);
+      await refresh();
+    } catch (e) {
+      setErr(e.message);
+    }
+  }
+
+  if (loading) return <p>加载中...</p>;
+  if (err) return <p style={{color:'red'}}>出错了：{err}</p>;
 
   return (
-    <div style={{
-      background: theme === 'light' ? '#fff' : '#333', 
-      color: theme === 'light' ? '#000' : '#fff',
-      padding: '20px'
-    }}>
+    <div style={{ padding: 16 }}>
       <h2>任务清单</h2>
-
-      <div style={{ display:'flex', gap:8, marginBottom:12 }}>
-        <button onClick={toggleTheme}>切换主题 ({theme === 'light' ? '浅色' : '深色'})</button>
-        <button onClick={refresh}>刷新</button>
-      </div>
-
-      <form onSubmit={onSubmit} style={{ margin: '15px 0' }}>
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="输入任务内容..."
-          style={{ marginRight: '10px', padding: '8px 12px', width: '300px' }}
-        />
-        <button type="submit">添加任务</button>
+      <form onSubmit={onAdd} style={{ margin: '12px 0' }}>
+        <input value={input} onChange={e=>setInput(e.target.value)} placeholder="输入任务..." />
+        <button type="submit" style={{ marginLeft: 8 }}>添加任务</button>
       </form>
-
-      {loading && <p>加载中...</p>}
-      {error && (
-        <div style={{ color:'#d32f2f', background:'#ffebee', padding:'10px', borderRadius:'4px', marginBottom:'15px' }}>
-          ❌ 出错了：{error}
-        </div>
-      )}
-
-      {(!loading && tasks.length === 0) ? (
-        <p style={{ color: '#666' }}>暂无任务。尝试添加一个任务吧！</p>
-      ) : (
-        <ul style={{ listStyle:'none', padding:0 }}>
-          {tasks.map(task => (
-            <div key={task.id} style={{ border:'1px solid #ccc', borderRadius:4, margin:'6px 0', padding:'6px 10px' }}>
-              <TaskItem task={task} onToggle={toggleTask} onDelete={removeTask} />
-              <div style={{ fontSize:12, marginTop:4 }}>
-                <Link to={`/task/${task.id}`}>详情</Link>
-              </div>
-            </div>
+      {tasks.length === 0 ? <p>没有任务</p> : (
+        <ul style={{ listStyle: 'none', padding: 0 }}>
+          {tasks.map(t => (
+            <li key={t.id} style={{ margin: '6px 0' }}>
+              <label style={{ marginRight: 8 }}>
+                <input
+                  type="checkbox"
+                  checked={t.done}
+                  onChange={e => onToggle(t.id, e.target.checked)}
+                />{' '}
+                <span style={{ textDecoration: t.done ? 'line-through' : 'none' }}>{t.text}</span>
+              </label>
+              <Link to={`/task/${t.id}`} style={{ textDecoration: t.done ? 'line-through' : 'none' }}>
++               {t.text}
++             </Link>
+              <button onClick={() => onDelete(t.id)} style={{ marginLeft: 8 }}>删除</button>
+            </li>
           ))}
         </ul>
       )}

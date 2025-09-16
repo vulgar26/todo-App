@@ -1,13 +1,9 @@
 import 'dotenv/config';
 
-const need = (key, fallback) => {
-  const v = process.env[key] ?? fallback;
-  if (v === undefined) throw new Error(`Missing env ${key}`);
-  return v;
-};
-
 export const config = {
-  env: process.env.NODE_ENV ?? 'development',
-  port: Number(need('PORT', 3000)),
-  dbFile: need('DB_FILE', './data/tasks.db'),
+  port: Number(process.env.PORT ?? 3000),
+  dbFile: process.env.DB_FILE ?? './data/tasks.db',
+  jwtSecret: process.env.JWT_SECRET ?? 'change_me',
+  jwtExpires: process.env.JWT_EXPIRES ?? '7d',
+  isTest: process.env.NODE_ENV === 'test'
 };
