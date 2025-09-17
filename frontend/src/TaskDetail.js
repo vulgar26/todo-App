@@ -26,10 +26,12 @@ export default function TaskDetail() {
   }
 
   useEffect(() => { 
-    load(); /* eslint-disable-next-line */ 
-    getTask(Number(id))
-    .then(data => setTask(data))
-    .catch(err => setErr(err));
+    setLoading(true);
+    setErr(null);
+    getTask(id)
+      .then((resp) => setTask(resp.data))
+      .catch((e) => setErr(e.message || String(e)))
+      .finally(() => setLoading(false));
   }, [id]);
 
   if (err) {

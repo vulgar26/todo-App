@@ -14,10 +14,9 @@ export default function LoginPage() {
     if (!error) nav('/app');
   };
 
-  if (user) {
-    nav('/app');
-    return null;
-  }
+  React.useEffect(() => {
+    if (user) nav('/app', { replace: true });
+  }, [user, nav]);
 
   return (
     <form onSubmit={handleSubmit}>

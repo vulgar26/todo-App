@@ -4,40 +4,46 @@ import { db } from '../db/connection.js';
 /**
  * 列出任务
  */
-export function listTasks({ userId, offset = 0, limit = 20, done, sort = 'id', order = 'DESC' }) {
-  try {
-    let sql = 'SELECT * FROM tasks WHERE userId = ?';
+export function listTasks({ 
+  userId, 
+  page = 1,
+  limit = 20, 
+  done, 
+  q,
+  sort = 'id', 
+  order = 'DESC' }) {
+    const where = ['userId = ?'];
     const params = [userId];
 
-    // 添加完成状态过滤
     if (typeof done === 'boolean') {
-      sql += ' AND completed = ?';
+      where.push('completed = ?');
       params.push(done ? 1 : 0);
     }
-
-    // 添加排序
-    const validSortColumns = ['id', 'title', 'completed', 'createdAt', 'updatedAt'];
-    const validOrders = ['ASC', 'DESC'];
-    
-    if (validSortColumns.includes(sort) && validOrders.includes(order.toUpperCase())) {
-      sql += ` ORDER BY ${sort} ${order.toUpperCase()}`;
-    } else {
-      sql += ' ORDER BY id DESC'; // 默认排序
+    if (q && q.trim()) {
+      where.push('title LIKE ?');
+      params.push(`%${q.trim()}%`);
     }
 
-    // 添加分页
-    sql += ' LIMIT ? OFFSET ?';
-    params.push(limit, offset);
+    const whereSQL = where.length ? `WHERE ${where.join(' AND ')}` : '';
 
-    console.log('Executing SQL:', sql, 'with params:', params);
-    const result = db.prepare(sql).all(...params);
-    console.log('Found tasks:', result.length);
+    const totalRow = db.prepare(
+      `SELECT COUNT(*) as c FROM tasks ${whereSQL}`
+    ).get(...params);
+    const total = totalRow?.c ?? 0;
     
-    return result;
-  } catch (error) {
-    console.error('Error in listTasks:', error);
-    throw error;
-  }
+    const validSort = ['id','title','completed','createdAt','updatedAt'];
+    const validOrder = ['ASC','DESC'];
+    const sortBy = validSort.includes(sort) ? sort : 'id';
+    const ord = validOrder.includes(order?.toUpperCase()) ? order.toUpperCase() : 'DESC';
+
+    const offset = Math.max(0, (Number(page) - 1) * Number(limit));
+    const lim = Math.max(1, Number(limit));
+
+    const rows = db.prepare(
+      `SELECT * FROM tasks ${whereSQL} ORDER BY ${sortBy} ${ord} LIMIT ? OFFSET ?`
+    ).all(...params, lim, offset);
+
+    return {rows,total};
 }
 
 /**

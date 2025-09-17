@@ -1,9 +1,14 @@
 // src/api/tasks.js
 import { request } from './client';
 
-export function listTasks(params = { offset: 0, limit: 20 }) {
-  const qs = new URLSearchParams(params).toString();
-  return request(`/api/tasks?${qs}`); // GET
+export function listTasks({ page=1, limit=10, q='',done } = {}) {
+  const params = new URLSearchParams();
+  params.set('page', page);
+  params.set('limit', limit);
+  if (q) params.set('q', q);
+  if (typeof done === 'boolean') params.set('done', done ? 'true' : 'false');
+
+  return request(`/api/tasks?${params.toString()}`); // GET
 }
 
 export function createTask(text) {
@@ -11,7 +16,7 @@ export function createTask(text) {
 }
 
 export function toggleTask(id, done) {
-  return request(`/api/tasks/${id}`, { method: 'PATCH', body: { done } });
+  return request(`/api/tasks/${id}`, {method: 'PATCH', body: { done } });
 }
 
 export function deleteTask(id) {

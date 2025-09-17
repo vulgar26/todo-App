@@ -12,7 +12,7 @@ export function useTasks() {
     try {
       setLoading(true);
       setError(null);
-      const res = await listTasks({ offset:0, limit:50, sort:'createdAt', order:'desc' });
+      const res = await listTasks({ page: 1, limit:50, q:'', done: undefined });
       setTasks(res.items);
     } catch (e) {
       setError(e.message || '列表加载失败');
