@@ -5,6 +5,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindException;       // 绑定失败（例如表单绑定）
 import org.springframework.web.bind.MethodArgumentNotValidException; // @RequestBody + @Valid 校验失败
 import org.springframework.web.bind.annotation.*;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 
 @RestControllerAdvice // 声明：全局控制器增强，所有控制器抛出的异常都会先到这里
 public class GlobalExceptionHandler {
@@ -40,6 +41,13 @@ public class GlobalExceptionHandler {
         // 生产里你会在这里打日志（例如 logger.error）
         return ResponseEntity.status(500).body(
                 ApiError.builder().error("INTERNAL_ERROR").message("Something went wrong").build()
+        );
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiError> onUnreadable(HttpMessageNotReadableException ex) {
+        return ResponseEntity.badRequest().body(
+                ApiError.builder().error("VALIDATION_ERROR").message("请求体缺失或JSON格式错误").build()
         );
     }
 }
