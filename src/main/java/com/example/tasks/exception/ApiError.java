@@ -1,11 +1,19 @@
 package com.example.tasks.exception;
 
-import lombok.Builder;  // 允许我们用 ApiError.builder().error("..").message("..").build()
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 @Builder
 public class ApiError {
-    private String error;    // 错误类型标识（例如 VALIDATION_ERROR, INTERNAL_ERROR）
-    private String message;  // 给前端看的提示信息
+    private String error;
+    private String message;
+
+    public static ApiError of(String error, String message) {
+        return new ApiError(error, message);
+    }
 }

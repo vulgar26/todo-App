@@ -3,6 +3,7 @@ package com.example.tasks.controller;
 import com.example.tasks.dto.CreateTaskReq;
 import com.example.tasks.dto.UpdateTaskReq;
 import com.example.tasks.dto.TaskDto;
+import com.example.tasks.service.TaskService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,6 +15,12 @@ import java.util.List;                 // List 用来返回 JSON 数组
 @RequestMapping("/api/tasks")          // 所有方法路径统一加 "/api/tasks"
 public class TaskController {
 
+    private final TaskService taskService;
+
+    public TaskController(TaskService taskService) {
+        this.taskService = taskService;
+    }
+
     @GetMapping                        // 处理 GET /api/tasks
     public List<TaskDto> list() {
         // 返回一个只有一条元素的列表：
@@ -23,15 +30,17 @@ public class TaskController {
 
     @PostMapping
     public ResponseEntity<TaskDto> create(@Valid @RequestBody CreateTaskReq req) {
-        var dto = new TaskDto(2L, req.getText(), false);
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(dto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(taskService.create(req));
     }
 
     @PostMapping("/{id}")
     public TaskDto update(@PathVariable Long id, @Valid @RequestBody UpdateTaskReq req) {
-        String text = (req.getText() != null) ? req.getText() : "Demo task";
-        Boolean done = (req.getDone() != null) ? req.getDone() : false;
-        return new TaskDto(id, text, done);
+        return taskService.update(id, req);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        taskService.delete(id);
+        return ResponseEntity.noContent().build();
     }
 }

@@ -1,53 +1,44 @@
 package com.example.tasks.exception;
 
-import jakarta.validation.ConstraintViolationException; // 参数/路径变量 校验失败抛的异常
+import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.ResponseEntity;
-import org.springframework.validation.BindException;       // 绑定失败（例如表单绑定）
-import org.springframework.web.bind.MethodArgumentNotValidException; // @RequestBody + @Valid 校验失败
-import org.springframework.web.bind.annotation.*;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 
-@RestControllerAdvice // 声明：全局控制器增强，所有控制器抛出的异常都会先到这里
+@ControllerAdvice
 public class GlobalExceptionHandler {
 
+    // @Valid 触发的 Bean 校验失败（RequestBody）
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiError> onMethodArgNotValid(MethodArgumentNotValidException ex) {
-        // 拿到第一个校验错误的默认消息（通常来自注解 @NotBlank(message="...") 等）
-        var msg = ex.getBindingResult().getAllErrors().get(0).getDefaultMessage();
-        return ResponseEntity.badRequest().body(
-                ApiError.builder().error("VALIDATION_ERROR").message(msg).build()
-        );
+        String msg = ex.getBindingResult().getAllErrors().get(0).getDefaultMessage();
+        return ResponseEntity.badRequest().body(ApiError.of("VALIDATION_ERROR", msg));
     }
 
-    @ExceptionHandler(BindException.class)
-    public ResponseEntity<ApiError> onBind(BindException ex) {
-        var msg = ex.getAllErrors().get(0).getDefaultMessage();
-        return ResponseEntity.badRequest().body(
-                ApiError.builder().error("VALIDATION_ERROR").message(msg).build()
-        );
-    }
-
+    // @Validated + @PathVariable/@RequestParam 校验失败（如果你用到了）
     @ExceptionHandler(ConstraintViolationException.class)
-    public ResponseEntity<ApiError> onConstraint(ConstraintViolationException ex) {
-        var msg = ex.getConstraintViolations().stream()
-                .findFirst().map(v -> v.getMessage()).orElse("Invalid input");
-        return ResponseEntity.badRequest().body(
-                ApiError.builder().error("VALIDATION_ERROR").message(msg).build()
-        );
+    public ResponseEntity<ApiError> onConstraintViolation(ConstraintViolationException ex) {
+        String msg = ex.getConstraintViolations().iterator().next().getMessage();
+        return ResponseEntity.badRequest().body(ApiError.of("VALIDATION_ERROR", msg));
     }
 
-    @ExceptionHandler(Exception.class) // 兜底：任何没被上面匹配的异常
-    public ResponseEntity<ApiError> onAny(Exception ex) {
-        // 生产里你会在这里打日志（例如 logger.error）
-        return ResponseEntity.status(500).body(
-                ApiError.builder().error("INTERNAL_ERROR").message("Something went wrong").build()
-        );
-    }
-
+    // 请求体缺失 / JSON 语法错误
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiError> onUnreadable(HttpMessageNotReadableException ex) {
-        return ResponseEntity.badRequest().body(
-                ApiError.builder().error("VALIDATION_ERROR").message("请求体缺失或JSON格式错误").build()
-        );
+        return ResponseEntity.badRequest().body(ApiError.of("VALIDATION_ERROR", "请求体缺失或 JSON 格式错误"));
+    }
+
+    // 资源找不到（Service 抛 TaskNotFoundException）
+    @ExceptionHandler(TaskNotFoundException.class)
+    public ResponseEntity<ApiError> onNotFound(TaskNotFoundException ex) {
+        return ResponseEntity.status(404).body(ApiError.of("NOT_FOUND", ex.getMessage()));
+    }
+
+    // 兜底：未知异常 → 500
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiError> onAny(Exception ex) {
+        return ResponseEntity.status(500).body(ApiError.of("INTERNAL_ERROR", "Something went wrong"));
     }
 }
