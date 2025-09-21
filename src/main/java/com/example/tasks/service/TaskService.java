@@ -7,6 +7,7 @@ import com.example.tasks.entity.Task;
 import com.example.tasks.exception.TaskNotFoundException;
 import com.example.tasks.repository.TaskRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -60,6 +61,7 @@ public class TaskService {
         taskRepository.deleteById(id);
     }
 
+    @Cacheable(value = "tasks", key = "#page + '-' + #size")
     public Page<TaskDto> searchTasks(int page, int size, Boolean done, String text, String sort) {
         int safePage = Math.max(0, page);
         int safeSize = Math.min(Math.max(size, 1), 100);
@@ -76,8 +78,8 @@ public class TaskService {
         }
 
         Pageable pageable = PageRequest.of(safePage, safeSize, sortObj);
+        Page<Task> tasks = taskRepository.findAll(pageable);
 
-        Page<Task> tasks;
         boolean hasText = (text != null && !text.isBlank());
         if (done != null && hasText) {
             tasks = taskRepository.searchTasks(done, text, pageable);

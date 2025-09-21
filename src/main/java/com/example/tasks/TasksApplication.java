@@ -2,8 +2,10 @@ package com.example.tasks;                    // 声明当前文件属于哪个�
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cache.annotation.EnableCaching;
 
-@SpringBootApplication                        // 开启 Spring Boot 自动配置与组件扫描
+@SpringBootApplication
+@EnableCaching// 开启 Spring Boot 自动配置与组件扫描
 public class TasksApplication {               // 定义一个公开的类，类名与文件名一致
     public static void main(String[] args) {  // Java 程序入口方法，固定写法
         SpringApplication.run(                // 启动 Spring 应用（内嵌 Tomcat 也随之启动）
