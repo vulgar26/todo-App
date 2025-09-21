@@ -24,3 +24,9 @@ logging:
   level:
     org.hibernate.SQL: debug
     org.hibernate.orm.jdbc.bind: trace
+
+security:
+  jwt:
+    secret: "1234567890abcdefghijklmnopqrstuvwxyz"
+    expiration-seconds: 86400
+    issuer: "tasks-app"
