@@ -7,6 +7,7 @@ import com.example.tasks.entity.Task;
 import com.example.tasks.exception.TaskNotFoundException;
 import com.example.tasks.repository.TaskRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -17,11 +18,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class TaskService {
 
-    @Autowired
     private final TaskRepository taskRepository;
 
     public TaskService(TaskRepository taskRepository) {
@@ -36,6 +37,7 @@ public class TaskService {
 
     // 新建：开启事务；save 后 Hibernate 会发 INSERT；id 会回填到实体
     @Transactional
+    @CacheEvict(value = "tasks", allEntries = true)
     public TaskDto create(CreateTaskReq req) {
         Task t = new Task();
         t.setText(req.getText());
@@ -46,6 +48,7 @@ public class TaskService {
 
     // 更新：先查（受管实体），改字段即可；提交时 Hibernate 自动发 UPDATE（脏检查）
     @Transactional
+    @CacheEvict(value = "tasks", allEntries = true)
     public TaskDto update(Long id, UpdateTaskReq req) {
         Task t = taskRepository.findById(id)
                 .orElseThrow(() -> new TaskNotFoundException(id));
@@ -56,20 +59,25 @@ public class TaskService {
     }
 
     @Transactional
+    @CacheEvict(value = "tasks", allEntries = true)
     public void delete(Long id) {
         // 也可以先判断存在再删，这里简单起见直接删
         taskRepository.deleteById(id);
     }
 
-    @Cacheable(value = "tasks", key = "#page + '-' + #size")
+    @Cacheable(
+            value = "tasks",
+            key = "T(String).format('%d-%d-%s-%s', #page, #done, (#text?:''), (#sort?:''))"
+    )
     public Page<TaskDto> searchTasks(int page, int size, Boolean done, String text, String sort) {
         int safePage = Math.max(0, page);
         int safeSize = Math.min(Math.max(size, 1), 100);
 
         Sort sortObj = Sort.unsorted();
+
         String sortTextForMeta = null;
-        if(sort != null && !sort.isBlank()){
-            String[] parts = sort.split(",",2);
+        if (sort != null && !sort.isBlank()) {
+            String[] parts = sort.split(",", 2);
             String field = parts[0].trim();
             String dir = (parts.length > 1 ? parts[1].trim().toLowerCase() : "asc");
             Sort.Direction direction = "desc".equals(dir) ? Sort.Direction.DESC : Sort.Direction.ASC;
@@ -81,6 +89,7 @@ public class TaskService {
         Page<Task> tasks = taskRepository.findAll(pageable);
 
         boolean hasText = (text != null && !text.isBlank());
+
         if (done != null && hasText) {
             tasks = taskRepository.searchTasks(done, text, pageable);
         } else if (done != null) {
@@ -96,5 +105,26 @@ public class TaskService {
 
     private TaskDto toDto(Task t) {
         return new TaskDto(t.getId(), t.getText(), t.getDone());
+    }
+
+    private Sort resolveSort(String sort) {
+        if (sort == null || sort.isBlank()) return Sort.unsorted();
+
+        String[] parts = sort.split(",", 2);
+        String field = parts[0].trim();
+        String dir = (parts.length > 1 ? parts[1].trim().toLowerCase() : "asc");
+
+        Map<String, String> ALLOW = Map.of(
+                "id", "id",
+                "text", "text",
+                "done", "done",
+                "createdAt", "createdAt",
+                "updatedAt", "updatedAt"
+        );
+        String mapped = ALLOW.get(field);
+        if (mapped == null) return Sort.unsorted();
+
+        Sort.Direction direction = "desc".equals(dir) ? Sort.Direction.DESC : Sort.Direction.ASC;
+        return Sort.by(direction, mapped);
     }
 }
