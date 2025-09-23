@@ -1,12 +1,18 @@
 package com.example.tasks.dto;
 
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 import org.springframework.data.domain.Page;
 import java.util.List;
+import java.io.Serializable;
 
-@Getter @Setter
-public class PageResponse<T> {
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Getter
+@Setter
+public class PageResponse<T> implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     private List<T> data;
     private Meta meta;
 
@@ -25,8 +31,12 @@ public class PageResponse<T> {
         return resp;
     }
 
-    @Setter @Getter
-    public static class Meta {
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Setter
+    @Getter
+    public static class Meta implements Serializable {
         private int page;
         private int size;
         private int totalPages;

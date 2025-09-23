@@ -59,7 +59,6 @@ public class SecurityConfig {
         // 2. 授权规则
         http.authorizeHttpRequests(registry -> registry
                 .requestMatchers("/api/auth/**", "/api/health", "/h2-console/**").permitAll() // 登录 & 健康检查 & H2 控制台放行
-                .requestMatchers("/api/tasks/**").authenticated() // 任务接口需要登录
                 .anyRequest().authenticated()
         );
 
@@ -70,8 +69,6 @@ public class SecurityConfig {
         http.addFilterBefore(new JwtAuthenticationFilter(jwtProvider, uds),
                 UsernamePasswordAuthenticationFilter.class);
 
-        // 5. 其他缺省
-        http.httpBasic(Customizer.withDefaults());
         return http.build();
     }
 }
