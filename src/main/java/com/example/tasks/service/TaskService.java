@@ -67,7 +67,7 @@ public class TaskService {
 
     @Cacheable(
             value = "tasks",
-            key = "#page + '-' + #size + '-' + (#done==null?'*':#done) + '-' + (#text==null?'':#text) + '-' + (#sort==null?'':#sort)"
+            key = "T(java.util.Objects).hash(#page, #size, #done, #text, #sort)"
     )
     public Page<TaskDto> searchTasks(int page, int size, Boolean done, String text, String sort) {
         int safePage = Math.max(0, page);

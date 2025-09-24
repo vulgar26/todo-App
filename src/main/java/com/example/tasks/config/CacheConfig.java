@@ -1,7 +1,9 @@
 package com.example.tasks.config;
 
 import java.time.Duration;
+import java.util.HashMap;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.cache.Cache;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
@@ -16,15 +18,22 @@ import org.springframework.cache.interceptor.CacheErrorHandler;
 public class CacheConfig {
 
     @Bean
-    public RedisCacheManager cacheManager(RedisConnectionFactory cf) {
-        var json = RedisSerializationContext.SerializationPair
-                .fromSerializer(new GenericJackson2JsonRedisSerializer());
+    public RedisCacheManager cacheManager(RedisConnectionFactory cf, ObjectMapper mapper) {
+        var json = new GenericJackson2JsonRedisSerializer(mapper);
 
-        var config = RedisCacheConfiguration.defaultCacheConfig()
-                .serializeValuesWith(json)
+        var defaultCfg = RedisCacheConfiguration.defaultCacheConfig()
+                .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(new StringRedisSerializer()))
+                .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(json))
                 .entryTtl(Duration.ofMinutes(10));
 
-        return RedisCacheManager.builder(cf).cacheDefaults(config).build();
+        var perCache = new HashMap<String, RedisCacheConfiguration>();
+
+        perCache.put("tasks", defaultCfg.entryTtl(Duration.ofMinutes(10)));
+
+        return RedisCacheManager.builder(cf)
+                .cacheDefaults(defaultCfg)
+                .withInitialCacheConfigurations(perCache)
+                .build();
     }
 
     @Bean

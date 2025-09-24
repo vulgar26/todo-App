@@ -9,7 +9,7 @@ spring:
     password: tasks123!
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     show-sql: true
   h2:
     console:
@@ -37,3 +37,7 @@ security:
     secret: "1234567890abcdefghijklmnopqrstuvwxyz"
     expiration-seconds: 86400
     issuer: "tasks-app"
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html

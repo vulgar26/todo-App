@@ -1,0 +1,38 @@
+version: "3.9"
+services:
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: tasksdb
+      MYSQL_USER: tasks
+      MYSQL_PASSWORD: tasks123!
+    ports:
+      - "3306:3306"
+    command: >
+      --default-authentication-plugin=caching_sha2_password
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+
+  app:
+    build: .
+    image: tasks-app
+    depends_on:
+      - mysql
+      - redis
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/tasksdb?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: tasks
+      SPRING_DATASOURCE_PASSWORD: tasks123!
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: "6379"
+      SECURITY_JWT_SECRET: "please_set_a_32+_char_secret_here________________"
+      SECURITY_JWT_EXPIRATION_SECONDS: "86400"
+    ports:
+      - "8080:8080"

@@ -31,20 +31,33 @@ dependencies {
     runtimeOnly("io.jsonwebtoken:jjwt-impl:0.11.5")
     runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.11.5")
 
-    implementation("com.mysql:mysql-connector-j:8.4.0")
     runtimeOnly("com.mysql:mysql-connector-j:8.4.0")
 
 	implementation("org.springframework.boot:spring-boot-starter-validation")
 	implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
-    runtimeOnly("com.h2database:h2")
-	compileOnly("org.projectlombok:lombok")
+
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0")
+
+    compileOnly("org.projectlombok:lombok")
 	annotationProcessor("org.projectlombok:lombok")
+
+    testImplementation("org.springframework.security:spring-security-test")
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.mockito:mockito-junit-jupiter:5.12.0")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
-tasks.withType<Test> {
-	useJUnitPlatform()
+tasks.test {
+    useJUnitPlatform()
+    maxParallelForks = 1
+    forkEvery = 0
+    jvmArgs("-Dfile.encoding=UTF-8")
+    testLogging {
+        events("FAILED", "SKIPPED", "STANDARD_OUT", "STANDARD_ERROR")
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+        showStackTraces = true
+        showStandardStreams = true
+    }
 }
