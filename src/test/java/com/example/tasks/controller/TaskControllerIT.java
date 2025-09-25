@@ -14,6 +14,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 
 import java.util.List;
 
@@ -62,7 +63,8 @@ class TaskControllerIT {
     void create_invalidBody_should400() throws Exception {
         mvc.perform(post("/api/tasks")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"text\":\"\"}"))
+                        .content("{\"text\":\"\"}")
+                        .with(csrf()))
                 .andExpect(status().isBadRequest());
     }
 }

@@ -1,0 +1,2 @@
+ALTER TABLE tasks
+  ADD COLUMN description VARCHAR(500) NULL AFTER text;
